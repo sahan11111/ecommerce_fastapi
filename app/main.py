@@ -39,3 +39,14 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     return user
 
+@app.get("/users/{user_id}", response_model=UserOut)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.get("/users/", response_model=List[UserOut])
+def list_users(skip: int = 0, limit: int = 100,db: Session = Depends(get_db)):
+    users = db.query(User).offset(skip).limit(limit).all()
+    return users
