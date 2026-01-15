@@ -1,0 +1,9 @@
+# Virtual environment
+venv/
+
+# SQLite database
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
