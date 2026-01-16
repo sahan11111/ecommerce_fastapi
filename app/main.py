@@ -1,8 +1,8 @@
 import fastapi
 from sqlalchemy.orm import Session
 from .models import User
-from .schemas import UserCreate,UserOut
-from .security import hash_password
+from .schemas import UserCreate, UserLogin,UserOut
+from .security import hash_password,verify_password
 from fastapi import FastAPI,status,HTTPException,Depends
 from typing import List
 from sqlalchemy.orm import Session
@@ -50,3 +50,36 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 def list_users(skip: int = 0, limit: int = 100,db: Session = Depends(get_db)):
     users = db.query(User).offset(skip).limit(limit).all()
     return users
+
+
+@app.post("/user/login/", status_code=status.HTTP_200_OK)
+def login_user(user_in: UserLogin, db: Session = Depends(get_db)):
+
+    user = db.query(User).filter(User.username == user_in.username).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+
+    if not verify_password(user_in.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+
+    return {
+        "message": "Login successful",
+        "user_id": user.id,
+        "username": user.username,
+        "email": user.email
+    }
+    
+@app.post("/user/logout/", status_code=status.HTTP_200_OK)
+def logout_user():
+    return {"message": "Logout successful"}
+    
+
+    
+
