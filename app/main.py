@@ -3,23 +3,33 @@ import jwt
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from .models import User
-from .schemas import UserCreate, UserLogin,UserOut
+from .schemas import OTPVerify, UserCreate, UserLogin,UserOut
 from .security import hash_password,verify_password
-from fastapi import FastAPI,status,HTTPException,Depends
+from fastapi import FastAPI,status,HTTPException,Depends, BackgroundTasks
 from typing import List
 from sqlalchemy.orm import Session
 from.database import engine, SessionLocal, Base
 from datetime import datetime, timedelta
+from .email_utils import send_otp_email
+from .otp_utils import generate_otp, otp_expiry
 
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 # Create database tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
 
 security=HTTPBearer()
 app = FastAPI()
-SECRET_KEY="LMO123"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-ALGORITHM = "HS256"
+SECRET_KEY=os.getenv("SECRET_KEY")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+)
+ALGORITHM = os.getenv("ALGORITHM")
+
 
 
 
@@ -35,21 +45,34 @@ def get_db():
 
 
 
-@app.post(
-    "/users/",
-    response_model=UserOut,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+@app.post("/users/register", status_code=201)
+def register_user(
+    user_in: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    # check existing user
+    if db.query(User).filter(User.email == user_in.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    otp = generate_otp()
+
     user = User(
         username=user_in.username,
         email=user_in.email,
         hashed_password=hash_password(user_in.password),
+        otp_code=otp,
+        otp_expires_at=otp_expiry(),
+        is_verified=False,
     )
+
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+
+    background_tasks.add_task(send_otp_email, user.email, user.username, otp)
+
+    return {"message": "OTP sent to your email"}
 
 @app.get("/users/{user_id}", response_model=UserOut)
 def read_user(user_id: int, db: Session = Depends(get_db)):
@@ -69,12 +92,21 @@ def login_user(user_in: UserLogin, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == user_in.username).first()
 
+    # ❌ User not found or password incorrect
     if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
         )
 
+    # ❌ User exists but NOT verified
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account not verified. Please verify OTP first."
+        )
+
+    # ✅ User verified → allow login
     access_token = create_access_token(
         data={
             "sub": user.username,
@@ -92,6 +124,7 @@ def login_user(user_in: UserLogin, db: Session = Depends(get_db)):
             "email": user.email
         }
     }
+    
     
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
@@ -111,6 +144,31 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 def logout_user():
     return {"message": "Logout successful"}
     
+from datetime import datetime
+
+@app.post("/users/verify-otp")
+def verify_otp(data: OTPVerify, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_verified:
+        return {"message": "Account already verified"}
+
+    if user.otp_code != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    if user.otp_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    user.is_verified = True
+    user.otp_code = None
+    user.otp_expires_at = None
+
+    db.commit()
+
+    return {"message": "Account verified successfully 🎉"}
 
     
 

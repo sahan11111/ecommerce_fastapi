@@ -27,3 +27,8 @@ class UserOut(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+    
+    
+class OTPVerify(BaseModel):
+    email: EmailStr
+    otp: str
