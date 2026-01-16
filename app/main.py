@@ -1,4 +1,6 @@
 import fastapi
+import jwt
+from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from .models import User
 from .schemas import UserCreate, UserLogin,UserOut
@@ -7,9 +9,22 @@ from fastapi import FastAPI,status,HTTPException,Depends
 from typing import List
 from sqlalchemy.orm import Session
 from.database import engine, SessionLocal, Base
+from datetime import datetime, timedelta
+
 # Create database tables if they don't exist
 Base.metadata.create_all(bind=engine)
+
+
+security=HTTPBearer()
 app = FastAPI()
+SECRET_KEY="LMO123"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ALGORITHM = "HS256"
+
+
+
+
+
 # Dependency to get a database session
 def get_db():
     db = SessionLocal()
@@ -17,10 +32,7 @@ def get_db():
         yield db
     finally:
         db.close()
-# Root endpoint for basic check
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI CRUD API!"}
+
 
 
 @app.post(
@@ -57,25 +69,44 @@ def login_user(user_in: UserLogin, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == user_in.username).first()
 
-    if not user:
+    if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
         )
 
-    if not verify_password(user_in.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
-        )
+    access_token = create_access_token(
+        data={
+            "sub": user.username,
+            "user_id": user.id
+        }
+    )
 
     return {
         "message": "Login successful",
-        "user_id": user.id,
-        "username": user.username,
-        "email": user.email
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email
+        }
     }
     
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
+    to_encode.update({"exp": expire})
+
+    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return token
+
+
 @app.post("/user/logout/", status_code=status.HTTP_200_OK)
 def logout_user():
     return {"message": "Logout successful"}
