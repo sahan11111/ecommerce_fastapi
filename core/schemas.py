@@ -1,5 +1,5 @@
 # app/schemas/user.py
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator,Field
 
 
 class UserCreate(BaseModel):
@@ -32,3 +32,12 @@ class UserLogin(BaseModel):
 class OTPVerify(BaseModel):
     email: EmailStr
     otp: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    
+    
+class ResetPasswordOTP(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=4, max_length=6)
+    new_password: str = Field(min_length=8)
