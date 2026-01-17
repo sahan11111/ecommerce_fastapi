@@ -3,7 +3,7 @@ import jwt
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from .models import User
-from .schemas import OTPVerify, UserCreate, UserLogin,UserOut
+from .schemas import ForgotPasswordRequest, OTPVerify, ResetPasswordOTP, UserCreate, UserLogin,UserOut
 from .security import hash_password,verify_password
 from fastapi import FastAPI,status,HTTPException,Depends, BackgroundTasks
 from typing import List
@@ -29,7 +29,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 )
 ALGORITHM = os.getenv("ALGORITHM")
-
 
 
 
@@ -170,5 +169,60 @@ def verify_otp(data: OTPVerify, db: Session = Depends(get_db)):
 
     return {"message": "Account verified successfully 🎉"}
 
-    
 
+@app.post("/users/forgot-password", status_code=200)
+def forgot_password(
+    data: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.email == data.email).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    otp = generate_otp()
+
+    user.otp_code = otp
+    user.otp_expires_at = otp_expiry()
+    db.commit()
+
+    background_tasks.add_task(
+        send_otp_email,
+        user.email,
+        user.username,
+        otp
+    )
+
+    return {"message": "OTP sent to your email for password reset"}
+   
+
+@app.post("/users/reset-password", status_code=200)
+def reset_password(
+    data: ResetPasswordOTP,
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.email == data.email).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user.otp_code or not user.otp_expires_at:
+        raise HTTPException(status_code=400, detail="OTP not requested")
+
+    if user.otp_code != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    if user.otp_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    # ✅ Hash new password (same as registration)
+    user.hashed_password = hash_password(data.new_password)
+
+    # Clear OTP
+    user.otp_code = None
+    user.otp_expires_at = None
+
+    db.commit()
+
+    return {"message": "Password reset successfully 🎉"}
