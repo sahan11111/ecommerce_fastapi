@@ -5,13 +5,14 @@ from sqlalchemy.orm import Session
 from .models import User
 from .schemas import ForgotPasswordRequest, OTPVerify, ResetPasswordOTP, UserCreate, UserLogin,UserOut
 from .security import hash_password,verify_password
-from fastapi import FastAPI,status,HTTPException,Depends, BackgroundTasks
+from fastapi import APIRouter,status,HTTPException,Depends, BackgroundTasks
 from typing import List
 from sqlalchemy.orm import Session
 from.database import engine, SessionLocal, Base
 from datetime import datetime, timedelta
 from .email_utils import send_otp_email
 from .otp_utils import generate_otp, otp_expiry
+
 
 from dotenv import load_dotenv
 import os
@@ -23,7 +24,7 @@ Base.metadata.create_all(bind=engine)
 
 
 security=HTTPBearer()
-app = FastAPI()
+app = APIRouter()
 SECRET_KEY=os.getenv("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
@@ -226,3 +227,4 @@ def reset_password(
     db.commit()
 
     return {"message": "Password reset successfully 🎉"}
+
