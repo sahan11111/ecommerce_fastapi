@@ -91,7 +91,12 @@ def read_products(db: Session = Depends(get_db)):
     response_model=ProductOut
 )
 def create_product(product: ProductCreate, db: Session = Depends(get_db)):
-    db_product = Product(**product.model_dump())
+    db_product = Product(
+        name=product.name,
+        price=product.price,
+        description=product.description,
+        category_id=product.category_id,
+    )
     db.add(db_product)
     db.commit()
     db.refresh(db_product)

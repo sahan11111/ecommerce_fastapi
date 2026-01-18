@@ -43,6 +43,7 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     price = Column(Float, nullable=False)
+    description = Column(String, nullable=True)
 
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     category = relationship("Category", back_populates="products")
@@ -53,3 +54,4 @@ class Product(Base):
         server_default=func.now(),
         onupdate=func.now()
     )
+    
