@@ -20,8 +20,14 @@ class User(Base):
 class Category(Base):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+
+    products = relationship(
+        "Product",
+        back_populates="category",
+        cascade="all, delete"
+    )
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -30,14 +36,17 @@ class Category(Base):
         onupdate=func.now()
     )
 
+
 class Product(Base):
     __tablename__ = "products"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    price = Column(Float)
-    category_id = Column(Integer, ForeignKey("categories.id"))
-    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    price = Column(Float, nullable=False)
+
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    category = relationship("Category", back_populates="products")
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),
