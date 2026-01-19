@@ -1,7 +1,7 @@
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field,conint
 from datetime import datetime
-
+from typing import List
 
 # ---------- CATEGORY ----------
 
@@ -52,4 +52,42 @@ class ProductOut(ProductBase):
 
     class Config:
         from_attributes = True
+        
+        
+# =========================
+# CartItem Schemas
+# =========================
+
+class CartItemCreate(BaseModel):
+    product_id: int
+    qty: int = Field(..., gt=0)  # quantity must be > 0
+
+
+class CartItemUpdate(BaseModel):
+    qty: int = Field(..., gt=0)
+
+
+class CartItemResponse(BaseModel):
+    id: int
+    product_id: int
+    qty: int
+    total_price: Decimal
+    total_price_with_tax: Decimal
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# Cart Schemas
+# =========================
+
+class CartResponse(BaseModel):
+    id: int
+    customer_id: int
+    total_price: Decimal
+    total_price_with_tax: Decimal
+    created_at: datetime
+    updated_at: datetime
+    items: List[CartItemResponse]
 
