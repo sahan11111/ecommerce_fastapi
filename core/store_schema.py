@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -25,9 +26,10 @@ class CategoryOut(CategoryBase):
 
 class ProductBase(BaseModel):
     name: str
-    price: float
-    description: str | None = None
+    stock_qty: int
+    price: Decimal
     category_id: int
+
 
 
 class ProductCreate(ProductBase):
@@ -36,15 +38,18 @@ class ProductCreate(ProductBase):
 
 class ProductUpdate(BaseModel):
     name: str | None = None
-    price: float | None = None
-    description: str | None = None
+    stock_qty: int | None = None
+    price: Decimal | None = None
     category_id: int | None = None
+
 
 
 class ProductOut(ProductBase):
     id: int
+    price_with_tax: Decimal
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
