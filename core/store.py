@@ -90,17 +90,22 @@ def read_products(db: Session = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     response_model=ProductOut
 )
-def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product(
+    product: ProductCreate,
+    db: Session = Depends(get_db)
+):
     db_product = Product(
         name=product.name,
+        stock_qty=product.stock_qty,   
         price=product.price,
-        description=product.description,
         category_id=product.category_id,
     )
+
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
     return db_product
+
 
 
 @router.get("/products/{product_id}", response_model=ProductOut)
@@ -109,7 +114,6 @@ def read_product(product_id: int, db: Session = Depends(get_db)):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
-
 
 @router.put("/products/{product_id}", response_model=ProductOut)
 def update_product(
@@ -127,6 +131,7 @@ def update_product(
     db.commit()
     db.refresh(db_product)
     return db_product
+
 
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
