@@ -1,3 +1,4 @@
+from datetime import datetime
 import fastapi
 import jwt
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
@@ -144,9 +145,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 def logout_user():
     return {"message": "Logout successful"}
     
-from datetime import datetime
 
-@app.post("/users/verify-otp")
+
+
+@app.put("/users/verify-otp")
 def verify_otp(data: OTPVerify, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
 
@@ -167,6 +169,7 @@ def verify_otp(data: OTPVerify, db: Session = Depends(get_db)):
     user.otp_expires_at = None
 
     db.commit()
+    db.refresh(user)
 
     return {"message": "Account verified successfully 🎉"}
 
