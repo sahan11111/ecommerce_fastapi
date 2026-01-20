@@ -53,10 +53,8 @@ class ProductOut(ProductBase):
     class Config:
         from_attributes = True
         
-        
-# =========================
-# CartItem Schemas
-# =========================
+# ---------- CARTITEM ---------- 
+
 
 class CartItemCreate(BaseModel):
     product_id: int
@@ -78,9 +76,7 @@ class CartItemResponse(BaseModel):
         from_attributes = True
 
 
-# =========================
-# Cart Schemas
-# =========================
+# ---------- CART ----------
 
 class CartResponse(BaseModel):
     id: int
