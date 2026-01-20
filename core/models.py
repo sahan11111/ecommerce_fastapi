@@ -213,7 +213,7 @@ class Cart(Base):
         ForeignKey("customers.id", ondelete="CASCADE"),
         nullable=False
     )
-
+    is_active = Column(Boolean, default=True, nullable=False)
     # Access related customer
     customer = relationship(
         "Customer",

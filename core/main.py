@@ -3,8 +3,10 @@ import fastapi
 import jwt
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from .models import User
-from .schemas import ForgotPasswordRequest, OTPVerify, ResetPasswordOTP, UserCreate, UserLogin,UserOut
+
+from core.dependencies import get_current_user
+from .models import Customer, User
+from .schemas import CustomerCreate, ForgotPasswordRequest, OTPVerify, ResetPasswordOTP, UserCreate, UserLogin,UserOut
 from .security import hash_password,verify_password
 from fastapi import APIRouter,status,HTTPException,Depends, BackgroundTasks
 from typing import List
@@ -231,3 +233,30 @@ def reset_password(
 
     return {"message": "Password reset successfully 🎉"}
 
+
+@app.post("/")
+def create_customer(
+    customer_in: CustomerCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),  # 👈 JWT user
+):
+    # Prevent duplicate customer profile
+    if current_user.customer:
+        raise HTTPException(
+            status_code=400,
+            detail="Customer profile already exists"
+        )
+
+    customer = Customer(
+        first_name=customer_in.first_name,
+        middle_name=customer_in.middle_name,
+        last_name=customer_in.last_name,
+        shipping_address=customer_in.shipping_address,
+        user_id=current_user.id,  # 🔥 AUTO-ASSIGNED HERE
+    )
+
+    db.add(customer)
+    db.commit()
+    db.refresh(customer)
+
+    return customer

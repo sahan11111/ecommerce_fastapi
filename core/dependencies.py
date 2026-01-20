@@ -1,33 +1,21 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import jwt
-from .models import User
-from.database import engine, SessionLocal, Base
-
-
-from dotenv import load_dotenv
 import os
 
-# Load environment variables from .env file
-load_dotenv()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+from .models import User
+from .database import SessionLocal
+from dotenv import load_dotenv
 
-security=HTTPBearer()
-SECRET_KEY=os.getenv("SECRET_KEY")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
-)
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
+security = HTTPBearer(auto_error=False)
 
 
-# Create database tables if they don't exist
-Base.metadata.create_all(bind=engine)
-
-
-
-# Dependency to get a database session
 def get_db():
     db = SessionLocal()
     try:
@@ -35,43 +23,54 @@ def get_db():
     finally:
         db.close()
 
+
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
-) -> User:
-    """
-    Extracts user from JWT token.
-    Acts like Django's request.user
-    """
-
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    try:
-        # Decode JWT token
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+):
+    # 🔴 STEP 1: Check header presence
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header missing",
         )
 
-        user_id: int | None = payload.get("sub")
+    if credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication scheme",
+        )
 
-        if user_id is None:
-            raise credentials_exception
+    token = credentials.credentials
 
-    except jwt.PyJWTError:
-        raise credentials_exception
+    # 🔴 STEP 2: Decode JWT
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
 
-    # Fetch user from database
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+            )
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+
+    # 🔴 STEP 3: Load user
     user = db.query(User).filter(User.id == user_id).first()
-
-    if user is None:
-        raise credentials_exception
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
 
     return user
-
-
