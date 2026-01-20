@@ -1,4 +1,5 @@
 # app/schemas/user.py
+from typing import Optional
 from pydantic import BaseModel, EmailStr, field_validator,Field
 
 
@@ -41,4 +42,10 @@ class ResetPasswordOTP(BaseModel):
     email: EmailStr
     otp: str = Field(min_length=4, max_length=6)
     new_password: str = Field(min_length=8)
+    
+class CustomerCreate(BaseModel):
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
+    shipping_address: str
     
