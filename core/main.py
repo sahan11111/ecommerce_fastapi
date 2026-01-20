@@ -20,8 +20,6 @@ import os
 
 # Load environment variables from .env file
 load_dotenv()
-# Create database tables if they don't exist
-Base.metadata.create_all(bind=engine)
 
 
 security=HTTPBearer()
@@ -33,6 +31,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
 ALGORITHM = os.getenv("ALGORITHM")
 
 
+# Create database tables if they don't exist
+Base.metadata.create_all(bind=engine)
 
 
 

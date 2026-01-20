@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from .store import router as store_router
 from .main import app as user_router
 from .cart import router as cart_router
+from .order import router as order_router
 
 
 app=FastAPI(
@@ -12,3 +13,4 @@ app=FastAPI(
 app.include_router(user_router, prefix="/users", tags=["users"])
 app.include_router(store_router, tags=["store"])
 app.include_router(cart_router, tags=["cart"])
+app.include_router(order_router, tags=["order"])
