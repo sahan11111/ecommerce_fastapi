@@ -4,7 +4,7 @@ import jwt
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from core.dependencies import get_current_user
+from .dependencies import get_current_user,superuser_required
 from .models import Customer, User
 from .schemas import CustomerCreate, ForgotPasswordRequest, OTPVerify, ResetPasswordOTP, UserCreate, UserLogin,UserOut
 from .security import hash_password,verify_password
@@ -78,11 +78,11 @@ def register_user(
     return {"message": "OTP sent to your email"}
 
 @app.get("/users/{user_id}", response_model=UserOut)
-def read_user(user_id: int, db: Session = Depends(get_db)):
+def read_user(user_id: int, db: Session = Depends(get_db),current_user: User = Depends(superuser_required)):
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    return {"User":user,"Admin": current_user}
 
 @app.get("/users/", response_model=List[UserOut])
 def list_users(skip: int = 0, limit: int = 100,db: Session = Depends(get_db)):
