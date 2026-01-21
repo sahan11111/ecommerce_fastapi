@@ -237,55 +237,31 @@ def pay_order(
 ):
     customer = current_user.customer
     if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer profile not found"
-        )
+        raise HTTPException(status_code=404, detail="Customer profile not found")
 
     order = (
         db.query(Order)
-        .filter(
-            Order.id == order_id,
-            Order.customer_id == customer.id
-        )
+        .filter(Order.id == order_id, Order.customer_id == customer.id)
         .first()
     )
 
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found"
-        )
+        raise HTTPException(status_code=404, detail="Order not found")
 
     if order.status != OrderStatusEnum.PENDING:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pending orders can be paid"
-        )
+        raise HTTPException(status_code=400, detail="Only pending orders can be paid")
 
     if order.is_paid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Order already paid"
-        )
+        raise HTTPException(status_code=400, detail="Order already paid")
 
-    # ---- PAYMENT LOGIC ----
-    order.payment_mode = data.payment_mode
-
-    if data.payment_mode == PaymentModeEnum.CASH:
-        # COD → not paid yet, but confirmed
-        order.is_paid = False
-        order.status = OrderStatusEnum.CONFIRM
-
-    elif data.payment_mode == PaymentModeEnum.ESEWA:
-        # Online payment → assume success
-        order.is_paid = True
-        order.status = OrderStatusEnum.CONFIRM
+    # ✅ Single source of truth
+    order.apply_payment(data.payment_mode)
 
     db.commit()
     db.refresh(order)
 
     return order
+
 
 @router.patch("/{order_id}/mark-paid", response_model=OrderSchema)
 def mark_order_paid(

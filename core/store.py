@@ -113,10 +113,10 @@ def create_product(
         category_id=product.category_id,
     )
 
-    db.add(db_product)
+    db.add(db_product,current_user)
     db.commit()
     db.refresh(db_product)
-    return {db_product,current_user}
+    return db_product
 
 
 
