@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session,joinedload
 from typing import List
 
+from core.dependencies import get_current_user,superuser_required
+
 from .database import SessionLocal
-from .models import Cart, CartItem, Category, Product
+from .models import Cart, CartItem, Category, Product, User
 from .store_schema import (
     CartItemCreate,
     CartItemUpdate,
@@ -38,9 +40,9 @@ def read_categories(db: Session = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     response_model=CategoryOut
 )
-def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
+def create_category(category: CategoryCreate, db: Session = Depends(get_db),current_user: User = Depends(superuser_required)):
     db_category = Category(**category.model_dump())
-    db.add(db_category)
+    db.add(db_category,current_user)
     db.commit()
     db.refresh(db_category)
     return db_category

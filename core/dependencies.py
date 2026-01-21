@@ -74,3 +74,9 @@ def get_current_user(
         )
 
     return user
+
+
+def superuser_required(user: User = Depends(get_current_user)):
+    if not user.is_superuser:
+        raise HTTPException(403, "Superusers only")
+    return user

@@ -17,6 +17,7 @@ def create_superuser():
         email=email,
         username=username,
         hashed_password=hash_password(password),
+        is_verified=True,
         is_superuser=True
     )
 
