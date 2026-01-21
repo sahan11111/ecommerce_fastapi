@@ -56,6 +56,10 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
+    
+    
+    is_superuser=Column(Boolean, default=False)
+
 
     # One-to-one relationship with Customer
     customer = relationship(
