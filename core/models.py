@@ -368,9 +368,21 @@ class Order(Base):
         back_populates="order",
         cascade="all, delete-orphan"
     )
+    
+    def apply_payment(self, payment_mode: PaymentModeEnum):
+        self.payment_mode = payment_mode
+
+        if payment_mode == PaymentModeEnum.CASH:
+            # Cash on delivery
+            self.is_paid = False
+            self.status = OrderStatusEnum.CONFIRM
+
+        elif payment_mode == PaymentModeEnum.ESEWA:
+            # Online payment
+            self.is_paid = True
+            self.status = OrderStatusEnum.CONFIRM
 
     def __str__(self):
-        return f"Order No {self.id}"
         return f"Order No {self.id}"
 
 class OrderItem(Base):
