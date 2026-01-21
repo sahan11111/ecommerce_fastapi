@@ -61,7 +61,7 @@ def read_category(category_id: int, db: Session = Depends(get_db)):
 def update_category(
     category_id: int,
     category: CategoryCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),current_user: User = Depends(superuser_required)
 ):
     category=db.query(Category).filter(Category.id==category_id).first()
     if not category:
@@ -71,17 +71,24 @@ def update_category(
 
     db.commit()
     db.refresh(category)
-    return category
+    return {
+        "category": category,
+        "updated_by": current_user
+    }
 
 
 @router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_category(category_id: int, db: Session = Depends(get_db)):
+def delete_category(category_id: int, db: Session = Depends(get_db),current_user: User = Depends(superuser_required)):
     category_id=db.query(Category).filter(Category.id==category_id).first()
     if not category_id:
         raise HTTPException(status_code=404, detail="Category not found")
 
     db.delete(category_id)
     db.commit()
+    return {"message": "Category deleted successfully","deleted_by":current_user}
+
+
+
 
 
 # ---------- PRODUCT ----------
@@ -97,7 +104,7 @@ def read_products(db: Session = Depends(get_db)):
 )
 def create_product(
     product: ProductCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),current_user: User = Depends(superuser_required)
 ):
     db_product = Product(
         name=product.name,
@@ -109,7 +116,7 @@ def create_product(
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
-    return db_product
+    return {db_product,current_user}
 
 
 
@@ -125,6 +132,7 @@ def update_product(
     product_id: int,
     product: ProductUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(superuser_required)
 ):
     db_product = db.query(Product).filter(Product.id == product_id).first()
     if not db_product:
@@ -135,16 +143,21 @@ def update_product(
 
     db.commit()
     db.refresh(db_product)
-    return db_product
+    return {db_product,current_user}
 
 
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(product_id: int, db: Session = Depends(get_db),current_user: User = Depends(superuser_required)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     db.delete(product)
     db.commit()
+    return {"message": "Product deleted successfully","deleted_by":current_user}
+
+
+
+
 
