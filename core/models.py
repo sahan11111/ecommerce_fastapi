@@ -336,7 +336,7 @@ class Order(Base):
         default=OrderStatusEnum.PENDING,
         nullable=False
     )
-
+    transaction_uuid = Column(String(100), nullable=True, unique=True, index=True)
     # Optional link to customer
     customer_id = Column(
         Integer,
