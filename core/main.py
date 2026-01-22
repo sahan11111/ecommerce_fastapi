@@ -85,9 +85,9 @@ def read_user(user_id: int, db: Session = Depends(get_db),current_user: User = D
     return {"User":user,"Admin": current_user}
 
 @app.get("/users/", response_model=List[UserOut])
-def list_users(skip: int = 0, limit: int = 100,db: Session = Depends(get_db)):
+def list_users(skip: int = 0, limit: int = 100,db: Session = Depends(get_db),current_user: User = Depends(superuser_required)):
     users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    return {"User":users,"Admin": current_user}
 
 
 @app.post("/user/login/", status_code=status.HTTP_200_OK)

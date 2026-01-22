@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>eSewa Test Payment</title>
+</head>
+<body>
+    <h1>eSewa Payment Test</h1>
+
+    <form id="esewaForm" method="POST" action="">
+        <label>Order ID:</label>
+        <input type="number" id="order_id" name="order_id" required>
+        <br><br>
+
+        <label>Amount:</label>
+        <input type="number" id="amount" name="amount" required>
+        <br><br>
+
+        <button type="button" onclick="initiatePayment()">Generate Transaction UUID</button>
+    </form>
+
+    <hr>
+
+    <div id="paymentSection" style="display:none;">
+        <h3>Transaction ready</h3>
+        <p>Transaction UUID: <span id="transaction_uuid"></span></p>
+        <button onclick="payBackend()">Pay via Backend (Simulation)</button>
+    </div>
+
+    <script>
+        async function initiatePayment() {
+            const orderId = document.getElementById('order_id').value;
+            const amount = document.getElementById('amount').value;
+
+            const response = await fetch('http://127.0.0.1:8000/payments/esewa/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: parseInt(orderId),
+                    tax_amount: 0,
+                    product_service_charge: 0,
+                    product_delivery_charge: 0
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                document.getElementById('transaction_uuid').innerText = data.transaction_uuid;
+                document.getElementById('paymentSection').style.display = 'block';
+            } else {
+                alert(JSON.stringify(data));
+            }
+        }
+
+        async function payBackend() {
+            const orderId = document.getElementById('order_id').value;
+
+            const response = await fetch(`http://127.0.0.1:8000/payments/esewa/pay-esewa/${orderId}`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert(`Payment simulated! Order ID ${data.order_id} is now paid.`);
+            } else {
+                alert(JSON.stringify(data));
+            }
+        }
+    </script>
+</body>
+</html>
